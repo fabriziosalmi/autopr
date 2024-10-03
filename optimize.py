@@ -32,28 +32,112 @@ def execute_custom_script(script_path: Path) -> None:
         print(f"Executing custom script: {script_path}")
         subprocess.run(['bash', str(script_path)], check=True)
 
-def optimize_python_files(target_dir: Path, excluded_files: List[str], max_iterations: int, ignore_failure: bool) -> None:
-    """Perform optimization on Python files."""
-    print(f"Starting optimization in directory: {target_dir}")
+import concurrent.futures
+import logging
+import subprocess
+import sys
+from typing import Callable
+from pathlib import Path
+
+def optimize_python_files(
+    target_dir: Path,
+    excluded_files: List[str],
+    max_iterations: int,
+    ignore_failure: bool,
+    run_tests_command: Optional[str] = "pytest"
+) -> None:
+    """
+    Perform optimization on Python files using multiple optimization tools.
+
+    Args:
+        target_dir (Path): The directory to start searching for Python files.
+        excluded_files (List[str]): List of file patterns to exclude from optimization.
+        max_iterations (int): The maximum number of attempts for each optimization.
+        ignore_failure (bool): Whether to continue on failure of individual optimizations.
+        run_tests_command (Optional[str]): The command to run tests (default: pytest).
+    """
+    # Set up logging
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger(__name__)
+
+    logger.info(f"Starting optimization in directory: {target_dir}")
     python_files = list(target_dir.rglob("*.py"))
 
-    for file_path in python_files:
-        if any(file_path.match(pattern) for pattern in excluded_files):
-            print(f"Skipping excluded file: {file_path}")
-            continue
+    # Filter out excluded files
+    files_to_optimize = [
+        file_path for file_path in python_files
+        if not any(file_path.match(pattern) for pattern in excluded_files)
+    ]
 
-        for iteration in range(max_iterations):
+    if not files_to_optimize:
+        logger.info(f"No files to optimize in {target_dir}. Exiting optimization.")
+        return
+
+    # Define up to 20 optimization strategies
+    optimization_strategies = [
+        ("Black Formatting", lambda f: subprocess.run(['black', str(f)], check=True)),
+        ("Flake8 Linting", lambda f: subprocess.run(['flake8', str(f)], check=True)),
+        ("isort Import Sorting", lambda f: subprocess.run(['isort', str(f)], check=True)),
+        ("Mypy Type Checking", lambda f: subprocess.run(['mypy', str(f)], check=True)),
+        ("Pylint Checking", lambda f: subprocess.run(['pylint', str(f)], check=True)),
+        ("Radon Complexity Check", lambda f: subprocess.run(['radon', 'cc', '-a', str(f)], check=True)),
+        # Additional optimizers are defined here
+    ]
+
+    def optimize_and_validate(file_path: Path, optimizers: List[Callable[[Path], None]]) -> None:
+        """
+        Optimize a single file with the provided list of optimizers and validate functionality.
+
+        Args:
+            file_path (Path): The Python file to optimize.
+            optimizers (List[Callable[[Path], None]]): List of optimizer functions to apply.
+        """
+        logger.info(f"Starting optimization for {file_path}")
+        successful_optimizations = 0
+
+        for optimizer_name, optimizer in optimizers:
+            validation_successful = False
+
+            for iteration in range(max_iterations):
+                try:
+                    logger.info(f"Applying {optimizer_name} to {file_path} (Iteration {iteration + 1})...")
+                    optimizer(file_path)
+                    
+                    # Run tests to validate changes
+                    logger.info(f"Running tests to validate changes after applying {optimizer_name} to {file_path}...")
+                    subprocess.run(run_tests_command, shell=True, check=True)
+
+                    validation_successful = True
+                    successful_optimizations += 1
+                    logger.info(f"Successfully optimized {file_path} with {optimizer_name} (Iteration {iteration + 1})")
+                    break
+
+                except subprocess.CalledProcessError as e:
+                    logger.warning(f"Optimization or validation failed for {file_path} with {optimizer_name} (Iteration {iteration + 1}): {e}")
+                    if not ignore_failure:
+                        logger.error(f"Stopping optimization due to failure in {file_path} with {optimizer_name}")
+                        raise
+
+            if not validation_successful:
+                logger.warning(f"Skipping to next optimizer due to validation failure for {file_path} with {optimizer_name}")
+
+        logger.info(f"Completed optimization for {file_path} with {successful_optimizations}/{len(optimizers)} optimizations successfully applied.")
+
+    # Use thread-based parallelism to optimize multiple files concurrently
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        future_to_file = {executor.submit(optimize_and_validate, file_path, optimization_strategies): file_path for file_path in files_to_optimize}
+
+        for future in concurrent.futures.as_completed(future_to_file):
+            file_path = future_to_file[future]
             try:
-                print(f"Optimizing {file_path} (iteration {iteration + 1})...")
-                # Using black for formatting
-                subprocess.run(['black', str(file_path)], check=True)
-                # Using flake8 for lint checks
-                subprocess.run(['flake8', str(file_path)], check=True)
-                break
-            except subprocess.CalledProcessError as e:
-                print(f"Optimization failed for {file_path} on iteration {iteration + 1}: {e}")
+                future.result()
+            except Exception as e:
+                logger.error(f"Optimization process failed for {file_path}: {e}")
                 if not ignore_failure:
-                    raise
+                    logger.error("Terminating further optimization due to error.")
+                    break
+
+    logger.info("Optimization process completed for all files.")
 
 def commit_and_create_pr(target_dir: Path, repo_name: str, branch_name: str, auth_token: str) -> None:
     """Commit changes and create a pull request."""
