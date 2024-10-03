@@ -56,6 +56,9 @@ def install_requirements(requirements_path: Path, venv_path: Path) -> None:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to install requirements from '{requirements_path}': {e}")
             raise
+    else:
+        logger.warning(f"Requirements file not found at {requirements_path}, skipping installation.")
+
 
 def execute_custom_script(script_path: Path) -> None:
     """Execute a custom script, if it exists."""
