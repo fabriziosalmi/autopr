@@ -1,49 +1,49 @@
 # Code Formatting Tools
-black==23.1.0
-yapf==0.32.0
-autopep8==2.0.1
-isort==5.10.1
+black
+yapf
+autopep8
+isort
 
 # Linting Tools
-flake8==6.0.0
-pylint==3.0.0
-pycodestyle==2.10.0
-pyflakes==3.1.0
+flake8
+pylint
+pycodestyle
+pyflakes
 
 # Type Checking
-mypy==1.2.0
+mypy
 
 # Security and Vulnerability Scanning
-bandit==1.7.4
-safety==2.4.0
-trufflehog==3.5.0
+bandit
+safety
+trufflehog
 
 # Complexity and Dead Code Analysis
-radon==5.1.0
-vulture==2.6
-lizard==1.17.7
-mccabe==0.7.0
-prospector==1.7.1  # Aggregates several linters
+radon
+vulture
+lizard
+mccabe
+prospector  # Aggregates several linters
 
 # Docstring and Documentation
-docformatter==1.5.1
-pydocstyle==6.3.0
+docformatter
+pydocstyle
 
 # Import Sorting
-reorder-python-imports==3.8.3
+reorder-python-imports
 
 # Code Refactoring and Enhancement
-autoflake==2.1.0  # To remove unused imports and variables
-monkeytype==22.4.0
-sourcery-cli==0.11.5
-jedi==0.19.0
+autoflake  # To remove unused imports and variables
+monkeytype
+sourcery-cli
+jedi
 
 # Dependency and Manifest Check
-check-manifest==0.48
-pyroma==4.0
+check-manifest
+pyroma
 
 # Profiling and Testing
-snakeviz==2.1.0  # Visualization tool for profiling data
+snakeviz  # Visualization tool for profiling data
 
 # For Optimization Enhancements
-pyupgrade==3.4.0
+pyupgrade
