@@ -101,14 +101,39 @@ def optimize_python_files(
         logger.info(f"No files to optimize in {target_dir}. Exiting optimization.")
         return
 
-    # Define up to 20 optimization strategies
+    # Define optimization strategies
     optimization_strategies = [
-        ("Black Formatting", lambda f: subprocess.run(['black', str(f)], check=True)),
-        ("Flake8 Linting", lambda f: subprocess.run(['flake8', str(f)], check=True)),
-        ("isort Import Sorting", lambda f: subprocess.run(['isort', str(f)], check=True)),
-        ("Mypy Type Checking", lambda f: subprocess.run(['mypy', str(f)], check=True)),
-        ("Pylint Checking", lambda f: subprocess.run(['pylint', str(f)], check=True)),
-        # Additional optimizers can be added here
+        ("Black Formatting", lambda f: subprocess.run(['black', str(f)], check=True)),  # Format code with Black
+        ("Flake8 Linting", lambda f: subprocess.run(['flake8', str(f)], check=True)),  # Lint with Flake8
+        ("isort Import Sorting", lambda f: subprocess.run(['isort', str(f)], check=True)),  # Sort imports with isort
+        ("Mypy Type Checking", lambda f: subprocess.run(['mypy', str(f)], check=True)),  # Static type checking
+        ("Pylint Checking", lambda f: subprocess.run(['pylint', str(f)], check=True)),  # Lint with Pylint
+        ("Radon Complexity Check", lambda f: subprocess.run(['radon', 'cc', '-a', str(f)], check=True)),  # Complexity analysis
+        ("Bandit Security Scan", lambda f: subprocess.run(['bandit', '-r', str(f)], check=True)),  # Scan for security issues
+        ("Pyflakes Linting", lambda f: subprocess.run(['pyflakes', str(f)], check=True)),  # Lint with Pyflakes
+        ("Yapf Formatting", lambda f: subprocess.run(['yapf', '-i', str(f)], check=True)),  # Format code with Yapf
+        ("Autopep8 Formatting", lambda f: subprocess.run(['autopep8', '--in-place', str(f)], check=True)),  # Format code with autopep8
+        ("Pyupgrade Syntax Upgrade", lambda f: subprocess.run(['pyupgrade', str(f)], check=True)),  # Upgrade syntax to latest standards
+        ("Docformatter Docstring Formatting", lambda f: subprocess.run(['docformatter', '-i', str(f)], check=True)),  # Format docstrings
+        ("Pydocstyle Docstring Style Check", lambda f: subprocess.run(['pydocstyle', str(f)], check=True)),  # Enforce docstring style
+        ("Safety Vulnerability Check", lambda f: subprocess.run(['safety', 'check', '-r', 'requirements.txt'], check=True) if f.name == "requirements.txt" else None),  # Security check on dependencies
+        ("Vulture Dead Code Detection", lambda f: subprocess.run(['vulture', str(f)], check=True)),  # Detect dead code with Vulture
+        ("Mccabe Complexity Check", lambda f: subprocess.run(['flake8', '--max-complexity', '10', str(f)], check=True)),  # Check code complexity with Mccabe
+        ("Duplicated Code Check (Flake8-Cognitive Complexity)", lambda f: subprocess.run(['flake8', '--select', 'C9', str(f)], check=True)),  # Check for cognitive complexity
+        ("Pycodestyle Linting", lambda f: subprocess.run(['pycodestyle', str(f)], check=True)),  # Lint with Pycodestyle
+        ("Autoflake Dead Code Removal", lambda f: subprocess.run(['autoflake', '--in-place', '--remove-unused-variables', '--remove-all-unused-imports', str(f)], check=True)),  # Remove unused code
+        ("Remove Unused Imports (Reorder Python Imports)", lambda f: subprocess.run(['reorder-python-imports', '--remove-unused', str(f)], check=True)),  # Remove unused imports
+        ("Add Import Type Hints (MonkeyType)", lambda f: subprocess.run(['monkeytype', 'apply', f'{f.stem}'], cwd=f.parent, check=True)),  # Add type hints with MonkeyType
+        ("Cyclomatic Complexity Report (Lizard)", lambda f: subprocess.run(['lizard', str(f)], check=True)),  # Analyze cyclomatic complexity
+        ("Check Manifest Integrity", lambda f: subprocess.run(['check-manifest'], check=True) if f.name == "setup.py" else None),  # Check Python package manifest
+        ("Pyroma Quality Rating", lambda f: subprocess.run(['pyroma', str(f)], check=True)),  # Evaluate code quality with Pyroma
+        ("TruffleHog Secrets Detection", lambda f: subprocess.run(['trufflehog', 'filesystem', str(f)], check=True)),  # Detect secrets in the code
+        ("Sourcery Code Refactoring", lambda f: subprocess.run(['sourcery', 'review', str(f)], check=True)),  # Refactor code using Sourcery
+        ("SnakeViz Profiling", lambda f: subprocess.run(['snakeviz', str(f)], check=True)),  # Visualize profiling data with SnakeViz
+        ("Jedi Refactoring", lambda f: subprocess.run(['jedi', 'refactor', str(f)], check=True)),  # Refactor code with Jedi
+        ("mccabe Cyclomatic Complexity Reduction", lambda f: subprocess.run(['flake8', '--max-complexity', '5', str(f)], check=True)),  # Reduce cyclomatic complexity further
+        ("Pygments Code Coloring Check", lambda f: subprocess.run(['pygmentize', str(f)], check=True)),  # Highlight the code for readability
+        ("Linters Aggregator (prospector)", lambda f: subprocess.run(['prospector', str(f)], check=True)),  # Aggregate linters for more insights
     ]
 
     def optimize_and_validate(file_path: Path, optimizers: List[Callable[[Path], None]]) -> None:
