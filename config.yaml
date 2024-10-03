@@ -3,40 +3,25 @@
 
 repositories:
   # List of repositories to be processed
-  - name: "example-repo"  # A friendly name for reference purposes
-    url: "https://github.com/username/example-repo.git"  # Repository URL (should be HTTPS)
+  - name: "autopr_test"  # A friendly name for reference purposes
+    url: "https://github.com/fabriziosalmi/autopr_test.git"  # Repository URL (should be HTTPS)
     branch: "main"  # Branch to be optimized (default is 'main')
     optimization:
       enable_optimizers: true  # Enable or disable code optimization for this repository
       max_iterations: 5  # Maximum iterations allowed per file for optimization
       ignore_failure: true  # If set to true, failures during optimization will be ignored to continue processing
     paths_to_optimize:
-      - "src/"  # Specify paths within the repository that should be optimized
-      - "scripts/"
+      - "test1.py"  # Specify paths within the repository that should be optimized
     excluded_files:
-      - "setup.py"  # Files or patterns to exclude from optimization
-      - "config/*.py"
+      - []
     notifications:  # Repository specific notifications (overrides global if provided)
-      enable: true
+      enable: false
       email:
         recipients:
           - "team@example.com"
         subject: "Optimization Report for example-repo"
         send_on:
           - "failure"  # Send notifications on specific conditions (success, failure)
-
-  - name: "another-repo"
-    url: "https://github.com/username/another-repo.git"
-    branch: "develop"
-    optimization:
-      enable_optimizers: false  # Skip optimization for this repository
-    paths_to_optimize:
-      - "app/"
-    excluded_files: []
-    advanced:
-      custom_scripts:  # Advanced customization for more control
-        pre_optimization: "scripts/pre_optimize.sh"  # Custom script to run before optimization
-        post_optimization: "scripts/post_optimize.sh"  # Custom script to run after optimization
 
 # General default settings to apply across all repositories unless specified otherwise
 default_settings:
@@ -49,10 +34,10 @@ default_settings:
 
 logging:
   level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
-  log_to_file: true  # Set to true if logs should be stored in a file
+  log_to_file: false  # Set to true if logs should be stored in a file
   file_path: "logs/auto_pr.log"  # Path to the log file
   rotation:
-    enabled: true  # Rotate logs to prevent a single large log file
+    enabled: false  # Rotate logs to prevent a single large log file
     max_size_mb: 10  # Maximum size of a log file before rotation
     backup_count: 5  # Number of old log files to keep
 
