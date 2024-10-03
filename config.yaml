@@ -1,0 +1,37 @@
+# Configuration file for AutoPR
+# This file defines one or more repositories for the automation process.
+
+repositories:
+  - name: "example-repo"
+    url: "https://github.com/username/example-repo.git"
+    branch: "main"
+    optimization:
+      enable_optimizers: true
+      max_iterations: 5
+      ignore_failure: true
+    paths_to_optimize:
+      - "src/"
+      - "scripts/"
+    excluded_files:
+      - "setup.py"
+      - "config/*.py"
+
+  - name: "another-repo"
+    url: "https://github.com/username/another-repo.git"
+    branch: "develop"
+    optimization:
+      enable_optimizers: false  # Skip optimization for this repo
+    paths_to_optimize:
+      - "app/"
+    excluded_files: []
+
+# General Settings
+default_settings:
+  max_iterations: 10
+  ignore_failure: true
+  enable_optimizers: true
+
+logging:
+  level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
+  log_to_file: true
+  file_path: "logs/auto_pr.log"
