@@ -1,42 +1,90 @@
 name: AutoPR Workflow
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:  # Allows manual triggering
+  schedule:
+    - cron: '0 0 * * *'  # Scheduled daily at midnight
 
 jobs:
   auto-pr-job:
     runs-on: ubuntu-latest
 
     env:
-      # Inject GitHub Secrets as Environment Variables for Use in Scripts
+      # Environment variables to manage the authentication and defaults from config.yaml
       DEFAULT_AUTH_TOKEN: ${{ secrets.DEFAULT_GITHUB_ACCESS_TOKEN }}
+      LOG_LEVEL: "INFO"
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v2
 
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.11'
+          python-version: '3.x'
 
-      - name: Install required tools
+      - name: Install Required Tools
         run: |
-          sudo apt-get update
+          sudo apt-get update -y
           sudo apt-get install -y curl wget git
 
-      - name: Install Python dependencies
+      - name: Install Python Dependencies
         run: |
+          pip install --upgrade pip
           pip install -r requirements.txt
+          pip install black flake8
 
-      - name: Run Optimization Script for Example Repo
-        env:
-          REPO_AUTH_TOKEN: ${{ secrets.EXAMPLE_REPO_ACCESS_TOKEN }}  # Inject repo-specific token
+      - name: Pre-Run Global Hook
+        if: ${{ always() }}
         run: |
-          python optimize.py --config config.yaml --repo-token $REPO_AUTH_TOKEN
+          if [ -f "scripts/global_pre_hook.sh" ]; then
+            chmod +x scripts/global_pre_hook.sh
+            ./scripts/global_pre_hook.sh
+          else
+            echo "No global pre-run hook found, skipping..."
+          fi
 
-      - name: Run Optimization Script for Another Repo
+      - name: Run Optimization Script for Each Repository
         env:
-          REPO_AUTH_TOKEN: ${{ secrets.ANOTHER_REPO_ACCESS_TOKEN }}
+          GITHUB_ACCESS_TOKEN: ${{ secrets.DEFAULT_GITHUB_ACCESS_TOKEN }}  # Inject default GitHub access token
         run: |
-          python optimize.py --config config.yaml --repo-token $REPO_AUTH_TOKEN
+          python optimize_script.py --config config.yaml
+
+      - name: Post-Run Global Hook
+        if: ${{ always() }}
+        run: |
+          if [ -f "scripts/global_post_hook.sh" ]; then
+            chmod +x scripts/global_post_hook.sh
+            ./scripts/global_post_hook.sh
+          else
+            echo "No global post-run hook found, skipping..."
+          fi
+
+      - name: Archive Optimization Logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: optimization-logs
+          path: logs/auto_pr.log
+
+      - name: Generate Optimization Report
+        if: ${{ always() }}
+        run: |
+          if [ -f "scripts/generate_report.sh" ]; then
+            chmod +x scripts/generate_report.sh
+            ./scripts/generate_report.sh
+          else
+            echo "No report generation script found, skipping..."
+          fi
+
+      - name: Send Notification on Failure
+        if: ${{ failure() }}
+        run: |
+          echo "Sending failure notification to configured recipients..."
+          python send_notification.py --config config.yaml --status failure
+
+      - name: Clean up
+        if: ${{ always() }}
+        run: |
+          echo "Cleaning up resources..."
+          rm -rf cloned_repos/ logs/
