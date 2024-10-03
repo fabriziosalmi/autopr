@@ -48,7 +48,7 @@ jobs:
         env:
           GITHUB_ACCESS_TOKEN: ${{ secrets.DEFAULT_GITHUB_ACCESS_TOKEN }}  # Inject default GitHub access token
         run: |
-          python optimize_script.py --config config.yaml
+          python optimize.py --config config.yaml
 
       - name: Post-Run Global Hook
         if: ${{ always() }}
