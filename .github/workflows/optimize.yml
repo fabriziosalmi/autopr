@@ -15,6 +15,11 @@ jobs:
       LOG_LEVEL: "INFO"
 
     steps:
+      - name: Configure Git Identity Globally
+        run: |
+          git config --global user.email "fabrizio.salmi@gmail.com"
+          git config --global user.name "fabriziosalmi"
+    
       - name: Checkout Repository
         uses: actions/checkout@v4
 
