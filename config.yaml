@@ -1,37 +1,64 @@
 # Configuration file for AutoPR
-# This file defines one or more repositories for the automation process.
+# This file defines settings for automating the optimization process of one or more repositories.
 
 repositories:
-  - name: "example-repo"
-    url: "https://github.com/username/example-repo.git"
-    branch: "main"
+  # List of repositories to be processed
+  - name: "example-repo"  # A friendly name for reference purposes
+    url: "https://github.com/username/example-repo.git"  # Repository URL (should be HTTPS)
+    branch: "main"  # Branch to be optimized (default is 'main')
     optimization:
-      enable_optimizers: true
-      max_iterations: 5
-      ignore_failure: true
+      enable_optimizers: true  # Enable or disable code optimization for this repository
+      max_iterations: 5  # Maximum iterations allowed per file for optimization
+      ignore_failure: true  # If set to true, failures during optimization will be ignored to continue processing
     paths_to_optimize:
-      - "src/"
+      - "src/"  # Specify paths within the repository that should be optimized
       - "scripts/"
     excluded_files:
-      - "setup.py"
+      - "setup.py"  # Files or patterns to exclude from optimization
       - "config/*.py"
 
   - name: "another-repo"
     url: "https://github.com/username/another-repo.git"
     branch: "develop"
     optimization:
-      enable_optimizers: false  # Skip optimization for this repo
+      enable_optimizers: false  # Skip optimization for this repository
     paths_to_optimize:
       - "app/"
-    excluded_files: []
+    excluded_files: []  # No files to exclude
 
-# General Settings
+# General default settings to apply across all repositories unless specified otherwise
 default_settings:
-  max_iterations: 10
-  ignore_failure: true
-  enable_optimizers: true
+  optimization:
+    enable_optimizers: true  # Enable optimization by default unless specified per repository
+    max_iterations: 10  # Maximum optimization iterations if not defined at the repo level
+    ignore_failure: true  # If optimization fails, continue without breaking the process
 
 logging:
   level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
-  log_to_file: true
-  file_path: "logs/auto_pr.log"
+  log_to_file: true  # Set to true if logs should be stored in a file
+  file_path: "logs/auto_pr.log"  # Path to the log file
+
+# Notification settings (optional)
+# You can add this section to enable email or other types of notifications after the optimization process.
+notifications:
+  enable: false  # Set to true if notifications are required
+  email:
+    recipients:
+      - "dev-team@example.com"
+    subject: "AutoPR Notification"
+    send_on:  # Conditions to send notifications
+      - "success"
+      - "failure"
+
+# Retry settings (optional)
+# To handle retries in case of network or transient issues.
+retry:
+  enabled: true  # Enable retry logic for transient failures
+  max_attempts: 3  # Maximum number of retry attempts
+  delay_seconds: 60  # Delay between retries
+
+# Advanced GitHub settings
+# To manage authentication via environment variables or GitHub secrets in workflows
+auth:
+  use_env_token: true  # Set to true if tokens will be passed via environment variables
+  token_name: "GITHUB_ACCESS_TOKEN"  # Name of the token environment variable
