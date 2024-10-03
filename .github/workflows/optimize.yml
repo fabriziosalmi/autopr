@@ -33,10 +33,10 @@ jobs:
         env:
           REPO_AUTH_TOKEN: ${{ secrets.EXAMPLE_REPO_ACCESS_TOKEN }}  # Inject repo-specific token
         run: |
-          python optimize_script.py --config config.yaml --repo-token $REPO_AUTH_TOKEN
+          python optimize.py --config config.yaml --repo-token $REPO_AUTH_TOKEN
 
       - name: Run Optimization Script for Another Repo
         env:
           REPO_AUTH_TOKEN: ${{ secrets.ANOTHER_REPO_ACCESS_TOKEN }}
         run: |
-          python optimize_script.py --config config.yaml --repo-token $REPO_AUTH_TOKEN
+          python optimize.py --config config.yaml --repo-token $REPO_AUTH_TOKEN
