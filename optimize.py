@@ -8,14 +8,14 @@ from typing import List, Callable, Optional
 import concurrent.futures
 import logging
 import shutil
-
+import tempfile
 
 # =========================== Setup Logging ===========================
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-
 # =========================== Helper Functions ===========================
+
 def load_config(config_path: str) -> dict:
     """Load and parse the configuration YAML file."""
     if not os.path.exists(config_path):
@@ -23,7 +23,6 @@ def load_config(config_path: str) -> dict:
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
     return config
-
 
 def clone_repository(repo_url: str, branch: str, auth_token: str, repo_name: str) -> Path:
     """Clone the repository from GitHub."""
@@ -40,17 +39,23 @@ def clone_repository(repo_url: str, branch: str, auth_token: str, repo_name: str
         raise
     return target_path
 
+def create_virtual_environment(target_path: Path) -> Path:
+    """Create a virtual environment for isolated testing."""
+    venv_path = target_path / 'venv'
+    logger.info(f"Creating virtual environment in {venv_path}...")
+    subprocess.run([sys.executable, '-m', 'venv', str(venv_path)], check=True)
+    return venv_path
 
-def install_requirements(requirements_path: Path) -> None:
-    """Install Python dependencies using pip."""
+def install_requirements(requirements_path: Path, venv_path: Path) -> None:
+    """Install Python dependencies using pip inside the virtual environment."""
     if requirements_path.exists():
         logger.info(f"Installing requirements from {requirements_path}...")
         try:
-            subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements_path)], check=True)
+            pip_executable = venv_path / 'bin' / 'pip'
+            subprocess.run([str(pip_executable), 'install', '-r', str(requirements_path)], check=True)
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to install requirements from '{requirements_path}': {e}")
             raise
-
 
 def execute_custom_script(script_path: Path) -> None:
     """Execute a custom script, if it exists."""
@@ -62,13 +67,24 @@ def execute_custom_script(script_path: Path) -> None:
             logger.error(f"Failed to execute custom script '{script_path}': {e}")
             raise
 
+def run_tests(target_path: Path, venv_path: Path, run_tests_command: Optional[str] = "pytest") -> None:
+    """Run tests using the specified command inside the virtual environment."""
+    logger.info(f"Running tests in virtual environment {venv_path}...")
+    try:
+        python_executable = venv_path / 'bin' / 'python'
+        subprocess.run([str(python_executable), '-m', run_tests_command], cwd=str(target_path), check=True, shell=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Tests failed: {e}")
+        raise
 
 # =========================== Optimization Functions ===========================
+
 def optimize_python_files(
     target_dir: Path,
     excluded_files: List[str],
     max_iterations: int,
     ignore_failure: bool,
+    venv_path: Path,
     run_tests_command: Optional[str] = "pytest"
 ) -> None:
     """Perform optimization on Python files using multiple optimization tools."""
@@ -92,8 +108,7 @@ def optimize_python_files(
         ("isort Import Sorting", lambda f: subprocess.run(['isort', str(f)], check=True)),
         ("Mypy Type Checking", lambda f: subprocess.run(['mypy', str(f)], check=True)),
         ("Pylint Checking", lambda f: subprocess.run(['pylint', str(f)], check=True)),
-        ("Radon Complexity Check", lambda f: subprocess.run(['radon', 'cc', '-a', str(f)], check=True)),
-        # Additional optimizers can be defined here
+        # Additional optimizers can be added here
     ]
 
     def optimize_and_validate(file_path: Path, optimizers: List[Callable[[Path], None]]) -> None:
@@ -114,7 +129,7 @@ def optimize_python_files(
 
                     # Run tests to validate changes
                     logger.info(f"Running tests to validate changes after applying {optimizer_name} to {file_path}...")
-                    subprocess.run(run_tests_command, shell=True, check=True)
+                    run_tests(target_dir, venv_path, run_tests_command)
 
                     validation_successful = True
                     successful_optimizations += 1
@@ -148,8 +163,8 @@ def optimize_python_files(
 
     logger.info("Optimization process completed for all files.")
 
-
 # =========================== Git Commit and Pull Request ===========================
+
 def commit_and_create_pr(target_dir: Path, repo_name: str, branch_name: str, auth_token: str) -> None:
     """Commit changes and create a pull request."""
     os.chdir(target_dir)
@@ -176,8 +191,8 @@ def commit_and_create_pr(target_dir: Path, repo_name: str, branch_name: str, aut
         logger.error(f"Failed to commit or create PR: {e}")
         raise
 
-
 # =========================== Main Process ===========================
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Optimize Python files in a repository.")
     parser.add_argument('--config', required=True, help='Path to the configuration YAML file.')
@@ -204,6 +219,9 @@ def main() -> None:
             # Clone repository
             target_path = clone_repository(repo_url, branch, auth_token, repo['name'])
 
+            # Create a virtual environment for isolated dependency management
+            venv_path = create_virtual_environment(target_path)
+
             # Execute pre-optimization script if exists
             pre_optimize_script = target_path / "scripts" / "pre_optimize.sh"
             execute_custom_script(pre_optimize_script)
@@ -211,11 +229,11 @@ def main() -> None:
             # Install requirements if any
             for path in paths_to_optimize:
                 requirements_path = target_path / path / "requirements.txt"
-                install_requirements(requirements_path)
+                install_requirements(requirements_path, venv_path)
 
             # Optimize Python files
             for path in paths_to_optimize:
-                optimize_python_files(target_path / path, excluded_files, max_iterations, ignore_failure)
+                optimize_python_files(target_path / path, excluded_files, max_iterations, ignore_failure, venv_path)
 
             # Execute post-optimization script if exists
             post_optimize_script = target_path / "scripts" / "post_optimize.sh"
@@ -228,7 +246,6 @@ def main() -> None:
             logger.error(f"Failed to process repository '{repo['name']}': {e}")
             if not ignore_failure:
                 break
-
 
 if __name__ == "__main__":
     main()
