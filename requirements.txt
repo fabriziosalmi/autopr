@@ -1,5 +1,5 @@
 # Code Formatting Tools
-black==23.1.0
+black==24.3.0
 yapf==0.32.0
 autopep8==2.0.1
 isort==5.10.1
